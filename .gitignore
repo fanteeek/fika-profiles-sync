@@ -1,0 +1,27 @@
+# Приватные ключи и чувствительные данные
+.ssh
+profiles_repo/ 
+backups/
+*.key
+*.pem
+
+# Конфигурационные файлы с паролями/токенами
+config.json
+.env
+*.env
+secrets.ini
+
+# Системные файлы
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Операционные системы
+.DS_Store
+Thumbs.db
