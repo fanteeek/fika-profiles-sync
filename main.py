@@ -46,8 +46,7 @@ class SPTGameSync:
         self.game_launcher = GameLauncher(self.config)
     
     def run(self) -> bool:
-        if self.updater.check_and_update():
-            return True
+        self.updater.check_for_updates()
         
         # Проверка токена
         if not self.github_client.test_token():

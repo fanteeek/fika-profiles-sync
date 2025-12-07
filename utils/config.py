@@ -25,7 +25,7 @@ class Config:
                 # Если запущено как скрипт (поднимаемся на 2 уровня вверх из utils/config.py)
                 self.BASE_DIR = Path(__file__).parent.parent.absolute()
             
-            self.APP_VERSION = '0.0.1'
+            self.APP_VERSION = '0.0.2'
             self.UPDATE_REPO_NAME = 'fanteeek/fika-profiles-sync'
             self._initialized = True
             self._config_loaded = False
