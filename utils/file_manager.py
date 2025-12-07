@@ -1,14 +1,20 @@
-# file_manager.py
 import os
 import shutil
-import subprocess
 import time
+import stat
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
 from utils.logger import Logger
 
 logger = Logger()
+
+def remove_readonly(func, path, _):
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except Exception:
+        pass
 
 class FileManager:
     def __init__(self):
@@ -21,22 +27,15 @@ class FileManager:
         max_attempts = 3
         for attempt in range(max_attempts):
             try:
-                shutil.rmtree(folder_path, ignore_errors=True)
+                shutil.rmtree(folder_path, onerror=remove_readonly)
                 if not folder_path.exists():
                     return True
                 
-                if attempt == 1:
-                    subprocess.run(
-                        ['cmd', '/c', 'rmdir', '/s', '/q', str(folder_path)],
-                        capture_output=True, 
-                        timeout=3
-                    )
-                
+            except Exception as e:
+                if attempt == max_attempts -1:
+                    logger.log('DEBUG', f'Не удалось удалить {folder_path}: {e}', 'error')
+                    
                 time.sleep(0.5)
-                
-            except Exception:
-                if attempt == max_attempts - 1:
-                    return False
         
         return not folder_path.exists()
     
@@ -70,3 +69,5 @@ class FileManager:
             if folder.exists():
                 if self.force_delete_folder(folder):
                     logger.log('DEBUG', f'Удалено: {folder.name}', 'ok')
+                else:
+                    logger.log('DEBUG', f'Не удалось удалить: {folder.name}', 'warn')
