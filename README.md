@@ -1,9 +1,9 @@
 # Fika Profile Sync
 
-![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
-![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)
+![.NET 9.0](https://img.shields.io/badge/.NET%209.0-512BD4?logo=dotnet&logoColor=white)
+![Platform](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 **Fika Profile Sync** is an automated tool designed for the **Fika Project** (a multiplayer mod for **SPT Tarkov**). It allows you and your friends to seamlessly synchronize game profiles via a private GitHub repository.
 
@@ -11,7 +11,7 @@
 
 *   **No Manual File Transfers:** Eliminates the need to manually send save files to the host or transfer them back to clients after playing solo. Everyone's progress is kept up-to-date on the server automatically.
 *   **Smart Synchronization:** Automatically handles download and upload of profiles based on file modification time.
-*   **Built with Spectre.Console:** Features a modern, beautiful, and interactive terminal interface.
+*   **Built with [Spectre.Console](https://github.com/spectreconsole/spectre.console):** Features a modern, beautiful, and interactive terminal interface.
 
 ## Prerequisites
 
