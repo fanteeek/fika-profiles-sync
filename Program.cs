@@ -84,7 +84,26 @@ class Program
                     pendingUploads = syncer.SyncProfiles(extractedContentDir, foundProfiles);
                     
                     FileManager.ForceDeleteDirectory(Path.Combine(config.BaseDir, "temp"));
-                } else Logger.Info("[yellow]![/] No profiles found in the repository.");
+                }
+                else
+                {
+                    Logger.Info("[yellow]![/] No profiles found in the repository.");
+
+                    if (Directory.Exists(config.GameProfilesPath))
+                    {
+                        var localFiles = Directory.GetFiles(config.GameProfilesPath, "*.json");
+                        foreach (var file in localFiles)
+                        {
+                            string fileName = Path.GetFileName(file);
+                            pendingUploads.Add(fileName);
+                        }
+
+                        if (pendingUploads.Count > 0)
+                        {
+                            Logger.Info($"[blue]Found {pendingUploads.Count} local profiles. They will be uploaded on exit.[/]");
+                        }
+                    }
+                }
                 shouldLaunch = true;
             }
             catch (Exception ex)
