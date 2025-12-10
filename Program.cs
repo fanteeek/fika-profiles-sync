@@ -5,149 +5,102 @@ class Program
 {
     static async Task Main(string[] args)
     {
-
-        Logger.Debug($"Application started. Args: {string.Join(" ", args)}");
-
-        if (args.Contains("-d") || args.Contains("--debug"))
-             Logger.Enable();
-             Logger.Debug("Debug mode enabled via arguments");
-
+        //debug
+        SetupLogger(args);
         var config = new Config();
 
-        // Visual ///////////////////////////////////////////////////////////////
-        string versionSuffix = Logger.IsDebugEnabled ? " [red](DEBUG MODE)[/]" : "";
-        Logger.Info($"[white on teal] FikaSync v{config.AppVersion}{versionSuffix} \n[/]");
-        // Config ///////////////////////////////////////////////////////////////
-        Logger.Info("[gray]Loading configuration...[/]");
+        PrintHeader(config);
+        config.EnsureConfiguration();
 
+        if (!config.IsValid())
+        {
+            Logger.Error(Loc.Tr("Setup_Incomplete"));
+            Console.ReadLine();
+            return;
+        }
+
+        Logger.Info(Loc.Tr("Config_Loading"));
         Logger.Debug($"Working folder: [blue]{config.BaseDir}[/]");
         Logger.Debug($"Path to profiles: [blue]{config.GameProfilesPath}[/]");
         Logger.Debug($"GitHub Token: [blue]{(string.IsNullOrEmpty(config.GithubToken) ? "[red]Not found[/]" : $"[blue]{config.GithubToken}[/]")}[/]");
         Logger.Debug($"GitHub URL: [blue]{(string.IsNullOrEmpty(config.RepoUrl) ? "[red]Not found[/]" : $"[blue]{config.RepoUrl}[/]")}[/]");
 
-        config.EnsureConfiguration();
-
-        if (!config.IsValid())
-        {
-            Logger.Error("Setup not complete. Exit.");
-            Console.ReadLine();
-            return;
-        }
-
-        // GitHub ///////////////////////////////////////////////////////////////
-        Logger.Info("[gray]Connecting to GitHub...[/]");
-
+        // git
+        Logger.Info(Loc.Tr("Conn_GitHub"));
         var github = new GitHubClient(config.GithubToken);
 
         var updater = new Updater(github, config);
         await updater.CheckForUpdates();
 
         bool isAuthSuccess = await github.TestToken();
-        bool shouldLaunch = false;
-        List<string> pendingUploads = new List<string>();
+
+        // sync
+        var syncer = new ProfileSync(config, github);
+        bool shouldLaunch;
         
         if (isAuthSuccess)
         {
             try
             {
-                var(owner, repo) = github.ExtractRepoInfo(config.RepoUrl);
-                Logger.Info($"Target repository: [blue]{owner}/{repo}[/]");
+                var repoInfo = github.ExtractRepoInfo(config.RepoUrl);
+                Logger.Info(Loc.Tr("Repo_Target", repoInfo.Owner, repoInfo.Repo));
 
-                string tempZipPath = Path.Combine(config.BaseDir, "temp", "repo.zip");
-                string extractPath = Path.Combine(config.BaseDir, "temp", "extracted");
+                await syncer.PerformStartupSync(repoInfo.Owner, repoInfo.Repo);
 
-                string? extractedContentDir = null;
-                List<string>? foundProfiles = null;
-                
-                Logger.Info("[gray]Downloading archive...[/]");
-
-                await AnsiConsole.Status()
-                    .StartAsync("Loading data...", async ctx =>
-                    {
-                        bool downloaded = await github.DownloadRepository(owner, repo, tempZipPath);
-                        if (!downloaded) throw new Exception("Failed to download file");
-
-                        ctx.Status("Unpacking...");
-                        extractedContentDir = FileManager.ExtractZip(tempZipPath, extractPath);
-
-                        if (extractedContentDir != null)
-                            foundProfiles = FileManager.FindProfiles(extractedContentDir);
-                    });
-
-                if (extractedContentDir != null && foundProfiles != null && foundProfiles.Count > 0)
-                {
-                    AnsiConsole.WriteLine();
-                    Logger.Info($"[bold]Profiles found in the cloud:[/] {foundProfiles.Count}");
-
-                    var syncer = new ProfileSync(config);
-
-                    pendingUploads = syncer.SyncProfiles(extractedContentDir, foundProfiles);
-                    
-                    FileManager.ForceDeleteDirectory(Path.Combine(config.BaseDir, "temp"));
-                }
-                else
-                {
-                    Logger.Info("[yellow]![/] No profiles found in the repository.");
-
-                    if (Directory.Exists(config.GameProfilesPath))
-                    {
-                        var localFiles = Directory.GetFiles(config.GameProfilesPath, "*.json");
-                        foreach (var file in localFiles)
-                        {
-                            string fileName = Path.GetFileName(file);
-                            pendingUploads.Add(fileName);
-                        }
-
-                        if (pendingUploads.Count > 0)
-                        {
-                            Logger.Info($"[blue]Found {pendingUploads.Count} local profiles. They will be uploaded on exit.[/]");
-                        }
-                    }
-                }
                 shouldLaunch = true;
             }
             catch (Exception ex)
             {
-                Logger.Error($"Synchronization error: {ex.Message}");
-                shouldLaunch = AnsiConsole.Confirm("Start the game without synchronization?", defaultValue: true);
+                Logger.Error(Loc.Tr("Result_Error", ex.Message));
+                shouldLaunch = AnsiConsole.Confirm(Loc.Tr("Start_Game_NoSync"), defaultValue: true);
             }
         }
         else
         {
-            Logger.Info("[yellow]![/] Synchronization skipped (no connection to GitHub).");
-            shouldLaunch = AnsiConsole.Confirm("Start the game without synchronization?", defaultValue: true);
+            Logger.Info(Loc.Tr("Offline_Mode"));
+            shouldLaunch = AnsiConsole.Confirm(Loc.Tr("Start_Game_NoSync"), defaultValue: true);
         }
 
+        //game
         if (shouldLaunch)
         {
-            var syncer = new ProfileSync(config);
-            var initialSnapshot = syncer.GetProfilesSnapshot();
+            syncer.CaptureSessionStartSnapshot();
 
             var launcher = new GameLauncher(config);
             var gamePlayedSuccessfully = await launcher.LaunchAndMonitor();
 
-            if (isAuthSuccess && !string.IsNullOrEmpty(config.RepoUrl) && gamePlayedSuccessfully)
+            if (isAuthSuccess && gamePlayedSuccessfully)
             {
                 AnsiConsole.WriteLine();
-                AnsiConsole.Write(new Rule("[yellow]Synchronization[/]"));
-                Logger.Info("[gray]Checking local changes...[/]");
+                AnsiConsole.Write(new Rule(Loc.Tr("Sync_Title")));
 
                 try 
                  {
-                     var (owner, repo) = github.ExtractRepoInfo(config.RepoUrl);
-                     await syncer.UploadChanges(owner, repo, initialSnapshot, github, pendingUploads);
+                    var repoInfo = github.ExtractRepoInfo(config.RepoUrl);
+                    await syncer.PerformShutdownSync(repoInfo.Owner, repoInfo.Repo);
                  }
                  catch (Exception ex)
                  {
-                    Logger.Error($"Error sending: {ex}");
+                    Logger.Error(Loc.Tr("Result_Error", ex));
                  }
             }
         }
         else
-            Logger.Info("[gray]The launch has been canceled or the server has crashed.[/]");
+            Logger.Info(Loc.Tr("Server_Exited"));
 
         Console.WriteLine();
-        Logger.Info("Press [blue]Enter[/] to exit.");
+        Logger.Info(Loc.Tr("Press_Enter"));
         Console.ReadLine();
+    }
+
+    static void SetupLogger(string[] args)
+    {
+        if (args.Contains("-d") || args.Contains("--debug")) Logger.Enable();
+    }
+
+    static void PrintHeader(Config config)
+    {
+        string v = Logger.IsDebugEnabled ? "(DEBUG)" : "";
+        Logger.Info($"[white on teal] FikaSync v{config.AppVersion}{v} \n[/]");
     }
 }

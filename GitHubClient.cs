@@ -25,21 +25,17 @@ public class GitHubClient
             var response = await _client.GetAsync("/user");
             if (response.IsSuccessStatusCode)
             {
-                var jsonString = await response.Content.ReadAsStringAsync();
-                var data = JsonNode.Parse(jsonString);
-                string login = data?["login"]?.ToString() ?? "Unknown";
-                Logger.Info($"[green]√[/] Authorized as: [bold]{login}[/]");
+                var json = await response.Content.ReadAsStringAsync();
+                var login = JsonNode.Parse(json)?["login"]?.ToString() ?? "Unknown";
+                Logger.Info(Loc.Tr("Auth_Success", login));
                 return true;
             }
-            else
-            {
-                Logger.Error($"GitHub error: {response.StatusCode}");
-                return false;
-            }
+            Logger.Error(Loc.Tr("Result_Error", response.StatusCode));
+            return false;
         }
         catch (Exception ex)
         {
-            Logger.Error($"Network error: {ex.Message}");
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
             return false;
         }
     }
@@ -48,15 +44,8 @@ public class GitHubClient
     {
         var cleanUrl = url.Trim().TrimEnd('/').Replace(".git", "");
         var parts = cleanUrl.Split('/');
-
-        if (parts.Length >= 2)
-        {
-            string repo = parts[^1];
-            string owner = parts[^2];
-            return (owner, repo);
-        }
-
-        throw new ArgumentException($"Incorrect GitHub URL: {url}");
+        if (parts.Length >= 2) return (parts[^2], parts[^1]);
+        throw new ArgumentException(Loc.Tr("Result_Error", url));
     }
 
     public async Task<bool> DownloadRepository(string owner, string repo, string savePath)
@@ -65,29 +54,18 @@ public class GitHubClient
         {
             string url = $"/repos/{owner}/{repo}/zipball";
             using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.Error($"Download error: {response.StatusCode}");
-                return false;
-            }
+            if (!response.IsSuccessStatusCode) return false;
 
             var dir = Path.GetDirectoryName(savePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+            if (dir != null) Directory.CreateDirectory(dir);
 
-            using var fileStream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-            using var downloadStream = await response.Content.ReadAsStreamAsync();
-
-            await downloadStream.CopyToAsync(fileStream);
-
+            using var fs = new FileStream(savePath, FileMode.Create);
+            await response.Content.CopyToAsync(fs);
             return true;
-
         }
         catch (Exception ex)
         {
-            Logger.Error($"Critical download error: {ex.Message}");
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
             return false;
         }
     }
@@ -97,42 +75,55 @@ public class GitHubClient
         try
         {
             string url = $"/repos/{owner}/{repo}/contents/{filePath}";
-            string base64Content = Convert.ToBase64String(content);
+            string base64 = Convert.ToBase64String(content);
+            string? sha = null;
 
-            string? currentSha = null;
-
-            var getResponse = await _client.GetAsync(url);
-            if (getResponse.IsSuccessStatusCode)
+            // Get existing SHA to update
+            try
             {
-                var jsonString = await getResponse.Content.ReadAsStringAsync();
-                var node = JsonNode.Parse(jsonString);
-                currentSha = node?["sha"]?.ToString();
+                var getRes = await _client.GetAsync(url);
+                if (getRes.IsSuccessStatusCode)
+                {
+                    var json = await getRes.Content.ReadAsStringAsync();
+                    sha = JsonNode.Parse(json)?["sha"]?.ToString();
+                }
             }
+            catch {}
 
             var body = new
             {
-                message = $"Update profile {Path.GetFileName(filePath)} (via FikaSync)",
-                content = base64Content,
-                sha = currentSha
+                message = $"Update profile {Path.GetFileName(filePath)}",
+                content = base64,
+                sha = sha
             };
 
             var response = await _client.PutAsJsonAsync(url, body);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Logger.Info($"[green]√[/] File sent: {Path.GetFileName(filePath)}");
-                return true;
-            }
-            else
-            {
-                Logger.Error($"Sending error {filePath}: {response.StatusCode}");
-                return false;
-            }
+            return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            Logger.Error($"Critical sending error: {ex.Message}");
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
             return false;
+        }
+    }
+    
+    public async Task<byte[]?> DownloadFileContent(string owner, string repo, string filePath)
+    {
+        try
+        {
+            string url = $"/repos/{owner}/{repo}/contents/{filePath}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            // Просим raw контент
+            req.Headers.Accept.Clear(); 
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3.raw"));
+
+            var res = await _client.SendAsync(req);
+            if (res.IsSuccessStatusCode) return await res.Content.ReadAsByteArrayAsync();
+            return null;
+        }
+        catch 
+        {
+            return null;
         }
     }
 
@@ -140,52 +131,12 @@ public class GitHubClient
     {
         try
         {
-            var response = await _client.GetAsync($"/repos/{repoName}/releases/latest");
-            if (!response.IsSuccessStatusCode) return null;
-
-            var jsonString = await response.Content.ReadAsStringAsync();
-            var node = JsonNode.Parse(jsonString);
-
-            string tag = node?["tag_name"]?.ToString() ?? "";
-            string url = node?["html_url"]?.ToString() ?? "";
-
-            return (tag, url);
+            var res = await _client.GetAsync($"/repos/{repoName}/releases/latest");
+            if (!res.IsSuccessStatusCode) return null;
+            var json = await res.Content.ReadAsStringAsync();
+            var node = JsonNode.Parse(json);
+            return (node?["tag_name"]?.ToString() ?? "", node?["html_url"]?.ToString() ?? "");
         }
-        catch
-        {
-            return null;
-        }
-    }
-
-    public async Task<byte[]?> DownloadFileContent(string owner, string repo, string filePath)
-    {
-        try
-        {
-            string url = $"/repos/{owner}/{repo}/contents/{filePath}";
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Accept.Clear();
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3.raw"));
-
-            var response = await _client.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsByteArrayAsync();
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                return null;
-            }
-            else
-            {
-                Logger.Error($"Error downloading content for verification {filePath}: {response.StatusCode}");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Critical verification download error: {ex.Message}");
-            return null;
-        }
+        catch { return null; }
     }
 }

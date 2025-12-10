@@ -5,22 +5,235 @@ using Spectre.Console;
 
 namespace FikaSync;
 
-public struct ProfileState
-{
-    public string Hash;
-    public long Timestamp;
-}
-
 public class ProfileSync
 {
     private readonly Config _config;
+    private readonly GitHubClient _client;
+    
+    private readonly HashSet<string> _pendingUploads = new();
+    
+    private Dictionary<string, long> _sessionStartTimestamps = new();
 
-    public ProfileSync(Config config)
+    public ProfileSync(Config config, GitHubClient client)
     {
         _config = config;
+        _client = client;
     }
 
-    private long GetProfileTimestamp(string jsonContent)
+    public async Task PerformStartupSync(string owner, string repo)
+    {
+        string tempZip = Path.Combine(_config.BaseDir, "temp", "repo.zip");
+        string extractPath = Path.Combine(_config.BaseDir, "temp", "extracted");
+
+        try
+        {
+            Logger.Debug(Loc.Tr("Sync_Downloading"));
+            bool downloaded = await AnsiConsole.Status().StartAsync(Loc.Tr("Sync_Downloading"), async ctx => 
+                await _client.DownloadRepository(owner, repo, tempZip));
+
+            if (!downloaded) throw new Exception(Loc.Tr("Result_Error"));
+
+            string? contentDir = FileManager.ExtractZip(tempZip, extractPath);
+
+            var remoteFiles = contentDir != null ? FileManager.FindProfiles(contentDir) : new List<string>();
+
+            if (remoteFiles.Count == 0)
+                Logger.Info(Loc.Tr("Sync_NoProfiles"));
+            else
+                Logger.Info(Loc.Tr("Sync_Found", remoteFiles.Count));
+
+            ProcessDownloadedFiles(remoteFiles);
+        }
+        finally
+        {
+            FileManager.ForceDeleteDirectory(Path.Combine(_config.BaseDir, "temp"));
+        }
+    }
+
+    public void CaptureSessionStartSnapshot()
+    {
+        _sessionStartTimestamps.Clear();
+        if (!Directory.Exists(_config.GameProfilesPath)) return;
+
+        foreach (var file in Directory.GetFiles(_config.GameProfilesPath, "*.json"))
+        {
+            string content = File.ReadAllText(file);
+            _sessionStartTimestamps[Path.GetFileName(file)] = GetTimestamp(content);
+        }
+    }
+
+    public async Task PerformShutdownSync(string owner, string repo)
+    {
+        Logger.Info(Loc.Tr("Sync_Checking"));
+        
+        var table = new Table();
+        table.Title(Loc.Tr("Sync_Report_Title")).AddColumn(Loc.Tr("Sync_Profile_Title")).AddColumn(Loc.Tr("Sync_Reason_Title")).AddColumn(Loc.Tr("Sync_Result_Title")).Border(TableBorder.Rounded);
+
+        if (!Directory.Exists(_config.GameProfilesPath))
+        {
+            Logger.Info(Loc.Tr("Sync_NoLocal"));
+            return;
+        }
+
+        var localFiles = Directory.GetFiles(_config.GameProfilesPath, "*.json");
+        bool hasActivity = false;
+        int sentCount = 0;
+
+        foreach (var file in localFiles)
+        {
+            string fileName = Path.GetFileName(file);
+            string content = File.ReadAllText(file);
+            long currentTs = GetTimestamp(content);
+
+            bool shouldUpload = false;
+            string reason = "";
+
+            long startTs = _sessionStartTimestamps.ContainsKey(fileName) ? _sessionStartTimestamps[fileName] : 0;
+            
+            if (currentTs > startTs)
+            {
+                shouldUpload = true;
+                reason = Loc.Tr("Reason_NewProgress");
+            }
+            else if (_pendingUploads.Contains(fileName))
+            {
+                if (await IsSafeToUploadPending(owner, repo, fileName, currentTs))
+                {
+                    shouldUpload = true;
+                    reason = Loc.Tr("Reason_Pending");
+                }
+                else
+                {
+                    table.AddRow(fileName, Loc.Tr("Result_Conflict"), Loc.Tr("Result_RemoteNewer"));
+                    continue;
+                }
+            }
+
+            if (shouldUpload)
+            {
+                hasActivity = true;
+                byte[] bytes = await File.ReadAllBytesAsync(file);
+                string repoPath = $"profiles/{fileName}";
+
+                if (await _client.UploadFile(owner, repo, repoPath, bytes))
+                {
+                    table.AddRow(fileName, reason, Loc.Tr("Result_Sent"));
+                    sentCount++;
+                }
+                else
+                {
+                    table.AddRow(fileName, reason, Loc.Tr("Result_Error"));
+                }
+            }
+        }
+
+        if (hasActivity) AnsiConsole.Write(table);
+        else Logger.Info(Loc.Tr("Sync_AllDone"));
+    }
+
+    private void ProcessDownloadedFiles(List<string> remoteFiles)
+    {
+        var table = new Table().AddColumn(Loc.Tr("Table_File")).AddColumn(Loc.Tr("Table_Status")).AddColumn(Loc.Tr("Table_Action"));
+        int updated = 0;
+
+        if (!Directory.Exists(_config.GameProfilesPath)) Directory.CreateDirectory(_config.GameProfilesPath);
+
+        var processedFiles = new HashSet<string>();
+
+        foreach (var remotePath in remoteFiles)
+        {
+            string fileName = Path.GetFileName(remotePath);
+            processedFiles.Add(fileName);
+            string localPath = Path.Combine(_config.GameProfilesPath, fileName);
+
+            string remoteContent = File.ReadAllText(remotePath);
+            long remoteTs = GetTimestamp(remoteContent);
+
+            long localTs = 0;
+            string localHash = "";
+            if (File.Exists(localPath))
+            {
+                string localContent = File.ReadAllText(localPath);
+                localTs = GetTimestamp(localContent);
+                localHash = GetFileHash(localPath);
+            }
+            
+            string remoteHash = GetFileHash(remotePath);
+
+            if (localHash == remoteHash)
+            {
+                table.AddRow(fileName, Loc.Tr("Status_Synced"), Loc.Tr("Action_Pass"));
+                continue;
+            }
+
+            if (localTs > remoteTs)
+            {
+                _pendingUploads.Add(fileName);
+                table.AddRow(fileName, Loc.Tr("Status_LocalNewer"), Loc.Tr("Action_WillUpload"));
+            }
+            else
+            {
+                ApplyUpdate(remotePath, localPath);
+                table.AddRow(fileName, Loc.Tr("Status_Update"), Loc.Tr("Action_Downloaded"));
+                updated++;
+            }
+        }
+
+        var localFiles = Directory.GetFiles(_config.GameProfilesPath, "*.json");
+        foreach(var file in localFiles)
+        {
+            string name = Path.GetFileName(file);
+            if (!processedFiles.Contains(name))
+            {
+                _pendingUploads.Add(name);
+                table.AddRow(name, Loc.Tr("Status_NewLocal"), Loc.Tr("Action_WillUpload"));
+            }
+        }
+
+        AnsiConsole.Write(table);
+        if (updated > 0) Logger.Info(Loc.Tr("Sync_Updated_Count", updated));
+    }
+
+    private void ApplyUpdate(string source, string dest)
+    {
+        try
+        {
+            if (File.Exists(dest)) CreateBackup(dest);
+            File.Copy(source, dest, true);
+            
+            var dt = File.GetLastWriteTime(source);
+            File.SetLastWriteTime(dest, dt);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
+        }
+    }
+
+    private async Task<bool> IsSafeToUploadPending(string owner, string repo, string fileName, long localTs)
+    {
+        AnsiConsole.MarkupLine(Loc.Tr("Verify_Remote"), fileName);
+        
+        byte[]? remoteBytes = await _client.DownloadFileContent(owner, repo, $"profiles/{fileName}");
+        
+        if (remoteBytes == null) return true;
+
+        try
+        {
+            string remoteJson = Encoding.UTF8.GetString(remoteBytes);
+            long remoteTs = GetTimestamp(remoteJson);
+            
+            Logger.Debug($"Verify {fileName}: LocalTS={localTs}, RemoteTS={remoteTs}");
+
+            return localTs > remoteTs;
+        }
+        catch
+        {
+            return false; 
+        }
+    }
+
+    private long GetTimestamp(string jsonContent)
     {
         try
         {
@@ -31,204 +244,23 @@ public class ProfileSync
         catch { return 0; }
     }
 
-    public Dictionary<string, ProfileState> GetProfilesSnapshot()
-    {
-        var snapshot = new Dictionary<string, ProfileState>();
-        if (Directory.Exists(_config.GameProfilesPath))
-        {
-            foreach(var file in Directory.GetFiles(_config.GameProfilesPath, "*.json"))
-            {
-                string content = File.ReadAllText(file);
-                snapshot[Path.GetFileName(file)] = new ProfileState
-                {
-                    Hash = GetFileHash(file),
-                    Timestamp = GetProfileTimestamp(content)
-                };
-            }
-        }
-
-        return snapshot;
-    }
-
-    public async Task UploadChanges(string owner, string repo, Dictionary<string, ProfileState> initialSnapshot, GitHubClient client, List<string> pendingUploads)
-    {
-
-        var table = new Table();
-        table.Title("Uploading changes").AddColumn("Profile").AddColumn("Status").AddColumn("Result").Border(TableBorder.Rounded);
-
-        var currentSnapshot = GetProfilesSnapshot();
-        int uploadCount = 0;
-        bool hasChanges = false;
-
-        foreach (var file in currentSnapshot)
-        {
-            string fileName = file.Key;
-            var currentState = file.Value;
-            bool needsUpload = false;
-            string statusTag = "";
-            bool changedDuringSession = false;
-
-            if (initialSnapshot.ContainsKey(fileName))
-            {
-                var initialState = initialSnapshot[fileName];
-                if (initialState.Hash != currentState.Hash && currentState.Timestamp >= initialState.Timestamp)
-                    changedDuringSession = true;
-            }
-            else changedDuringSession = true;
-
-            if (changedDuringSession)
-            {
-                statusTag = "[green]New Progress[/]";
-                needsUpload = true;
-            }else if (pendingUploads.Contains(fileName))
-            {
-                Logger.Info($"[gray]Verifying status for pending file: {fileName}...[/]");
-
-                string repoPath = $"profiles/{fileName}";
-                byte[]? remoteBytes = await client.DownloadFileContent(owner, repo, repoPath);
-
-                long remoteTs = 0;
-                if (remoteBytes != null)
-                {
-                    string remoteJson = Encoding.UTF8.GetString(remoteBytes);
-                    remoteTs = GetProfileTimestamp(remoteJson);
-                }
-
-                if (currentState.Timestamp > remoteTs)
-                {
-                    statusTag = "[blue]Sync Pending[/]";
-                    needsUpload = true;
-                    Logger.Debug($"Safe to upload pending {fileName}. Local: {currentState.Timestamp} > Remote: {remoteTs}");
-                }
-                else
-                {
-                    table.AddRow(fileName.EscapeMarkup(), "[red]Conflict[/]", "[gray]Skipped (Remote became newer)[/]");
-                    Logger.Debug($"Skipping pending upload for {fileName}. Remote was updated during session!");
-                    needsUpload = false;
-                }
-
-            }
-
-            if (needsUpload)
-            {
-                hasChanges = true;
-                string fullPath = Path.Combine(_config.GameProfilesPath, fileName);
-                string repoPath = $"profiles/{fileName}"; 
-                byte[] content = await File.ReadAllBytesAsync(fullPath);
-                
-                if(await client.UploadFile(owner, repo, repoPath, content))
-                {
-                    table.AddRow(fileName.EscapeMarkup(), statusTag, "[green]Sent[/]");
-                    uploadCount++;
-                }
-                else
-                {
-                    table.AddRow(fileName.EscapeMarkup(), statusTag, "[red]Error[/]");
-                }
-            }
-        }
-
-        if (hasChanges) AnsiConsole.Write(table);
-        else Logger.Info("[gray]No changes to upload.[/]");
-            
-    }
-
     private string GetFileHash(string filePath)
     {
         if (!File.Exists(filePath)) return string.Empty;
-
-        using (var sha256 = SHA256.Create())
-        {
-            using (var stream = File.OpenRead(filePath))
-            {
-                byte[] hashBytes = sha256.ComputeHash(stream);
-                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-            }
-        }
-    }
-
-    public List<string> SyncProfiles(string extractedFolder, List<string> downloadedFiles)
-    {
-        var table = new Table();
-        table.AddColumn("File").AddColumn("Status").AddColumn("Action");
-        
-        var pendingUploads = new List<string>();
-        int updatedCount = 0;
-
-        if (!Directory.Exists(_config.GameProfilesPath)) Directory.CreateDirectory(_config.GameProfilesPath);
-
-        foreach (var downloadedFile in downloadedFiles)
-        {
-            string fileName = Path.GetFileName(downloadedFile);
-            string localFile = Path.Combine(_config.GameProfilesPath, fileName);
-            
-            string remoteContent = File.ReadAllText(downloadedFile);
-            long remoteTs = GetProfileTimestamp(remoteContent);
-
-            long localTs = 0;
-            if (File.Exists(localFile))
-            {
-                string localContent = File.ReadAllText(localFile);
-                localTs = GetProfileTimestamp(localContent);
-            }
-
-            if (GetFileHash(localFile) == GetFileHash(downloadedFile))
-            {
-                table.AddRow(fileName, "[green]Relevant[/]", "[gray]Pass[/]");
-                continue;
-            }
-            
-            Logger.Debug($"File: {fileName} | LocalTS: {localTs} | RemoteTS: {remoteTs}");
-
-            if (localTs > remoteTs && localTs > 0)
-            {
-                pendingUploads.Add(fileName);
-                table.AddRow(fileName, "[blue]Local newer[/]", "[yellow]Pending Upload[/]");
-                continue;
-            }
-
-            try
-            {
-                if (File.Exists(localFile)) CreateBackup(localFile);
-
-                File.Copy(downloadedFile, localFile, true);
-                var originalTime = File.GetLastWriteTime(downloadedFile);
-                File.SetLastWriteTime(localFile, originalTime);
-
-                table.AddRow(fileName, "[yellow]Updated[/]", "[blue]Downloaded[/]");
-                updatedCount++;
-            }
-            catch (Exception ex)
-            {
-                table.AddRow(fileName, "[red]Error[/]", ex.Message);
-            }
-        }
-
-        AnsiConsole.Write(table);
-
-        if (updatedCount > 0) Logger.Info($"[green]Profiles successfully updated: {updatedCount}[/]");
-        else Logger.Info("[gray]All profiles are current/newer, no updates.[/]");
-
-        return pendingUploads;
+        using var sha = SHA256.Create();
+        using var stream = File.OpenRead(filePath);
+        return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
     }
 
     private void CreateBackup(string filePath)
     {
         try
         {
-            string fileName = Path.GetFileName(filePath);
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            string backupDir = Path.Combine(_config.BaseDir, "backups", timestamp);
-
-            if (!Directory.Exists(backupDir))
-                Directory.CreateDirectory(backupDir);
-
-            string destFile = Path.Combine(backupDir, fileName);
-            File.Copy(filePath, destFile);
+            string ts = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            string dir = Path.Combine(_config.BaseDir, "backups", ts);
+            Directory.CreateDirectory(dir);
+            File.Copy(filePath, Path.Combine(dir, Path.GetFileName(filePath)));
         }
-        catch
-        {
-            Logger.Error($"Failed to create backup for {Path.GetFileName(filePath)}");
-        }
+        catch { }
     }
 }
