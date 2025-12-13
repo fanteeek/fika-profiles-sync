@@ -7,7 +7,6 @@ public static class Loc
 {
     private static Dictionary<string, string> _currentStrings;
 
-    // Словари для разных языков
     private static readonly Dictionary<string, string> _en = new()
     {
         // Program & General
@@ -16,7 +15,7 @@ public static class Loc
         {"Config_Loading", "Loading configuration..."},
         {"Setup_Incomplete", "Setup not complete. Exit."},
         {"Conn_GitHub", "Connecting to GitHub..."},
-        {"Repo_Target", "Target repository: [blue]{0}/{1}[/]" },
+        {"Repo_Target", "Target repository: [blue]{0}/{1}[/]" }, // debug
         {"Offline_Mode", "[yellow]![/] Offline mode (GitHub not reachable)."},
         {"Start_Game_Question", "Start the game?"},
         {"Start_Game_NoSync", "Start the game without synchronization?"},
@@ -93,7 +92,7 @@ public static class Loc
         {"Server_Stopped", "[green]√[/] The server has been shut down."},
         
         // GitHub
-        {"Auth_Success", "[green]√[/] Authorized as: [bold]{0}[/]"},
+        {"Auth_Success", "[green]√[/] Authorized as: [bold]{0}[/]"}, //debug
         {"File_Sent", "[green]√[/] File sent: {0}"}
     };
 
@@ -124,7 +123,7 @@ public static class Loc
         {"Update_Body", "[yellow]Новая версия:[/] [green]v{0}[/]\nВаша версия: [gray]v{1}[/]\n\nСкачать: [blue underline]{2}[/]"},
         {"Update_Latest", "[gray]У вас последняя версия программы. (v{0})[/]"},
 
-        {"Sync_Title", "[yellow]Сихнронизация[/]"},
+        {"Sync_Title", "[yellow]Синхронизация[/]"},
         {"Sync_Downloading", "[gray]Загрузка профилей из облака...[/]"},    
         {"Sync_NoProfiles", "[yellow]![/] В облаке нет профилей (Репозиторий пуст)."},
         {"Sync_Found", "[bold]Профилей в облаке:[/] {0}"},
@@ -133,7 +132,7 @@ public static class Loc
         {"Table_File", "Файл"},
         {"Table_Status", "Статус"},
         {"Table_Action", "Действие"},
-        {"Status_Synced", "[green]Актуал[/]"},
+        {"Status_Synced", "[green]Актуальный[/]"},
         {"Status_LocalNewer", "[blue]Локальный новее[/]"},
         {"Status_NewLocal", "[green]Новый локальный[/]"},
         {"Status_Update", "[yellow]Обновить[/]"},
@@ -147,7 +146,7 @@ public static class Loc
         {"Sync_Result_Title", "Результат"},
         {"Sync_NoLocal", "[gray]Локальные профили не найдены.[/]"},
         {"Reason_NewProgress", "[green]Новый прогресс[/]"},
-        {"Reason_Pending", "[blue]Отложенная синхра[/]"},
+        {"Reason_Pending", "[blue]Отложенная синхронизация[/]"},
         {"Result_Conflict", "[red]Конфликт[/]"},
         {"Result_RemoteNewer", "В облаке новее"},
         {"Result_Sent", "[green]Отправлен[/]"},
@@ -184,7 +183,7 @@ public static class Loc
         {"Config_Loading", "Завантаження конфігурації..."},
         {"Setup_Incomplete", "Налаштування не завершено. Вихід."},
         {"Conn_GitHub", "Підключення до GitHub..."},
-        {"Repo_Target", "Цільовий репозиторій: [blue]{0}/{1}[/]" },
+        {"Repo_Target", "Цільовий репозиторій: [blue]{0}/{1}[/]" }, 
         {"Offline_Mode", "[yellow]![/] Офлайн режим (немає доступу до GitHub)."},
         {"Start_Game_Question", "Запустити гру?"},
         {"Start_Game_NoSync", "Запустити гру без синхронізації?"},
@@ -206,14 +205,14 @@ public static class Loc
 
         {"Sync_Title", "[yellow]Синхронізація[/]"},
         {"Sync_Downloading", "[gray]Завантаження профілів з облака...[/]"},
-        {"Sync_NoProfiles", "[yellow]![/] У облоці немає профілів (Репозиторій порожній)."},
-        {"Sync_Found", "[bold]Профілів у облака:[/] {0}"},
+        {"Sync_NoProfiles", "[yellow]![/] У хмарі немає профілів (Репозиторій порожній)."},
+        {"Sync_Found", "[bold]Профілів у хмарі:[/] {0}"},
         {"Sync_Updated_Count", "[green]Оновлено {0} профілів з облака.[/]"},
         
         {"Table_File", "Файл"},
         {"Table_Status", "Статус"},
         {"Table_Action", "Дія"},
-        {"Status_Synced", "[green]Актуал[/]"},
+        {"Status_Synced", "[green]Актуальний[/]"},
         {"Status_LocalNewer", "[blue]Локальний новіший[/]"},
         {"Status_NewLocal", "[green]Новий локальний[/]"},
         {"Status_Update", "[yellow]Оновити[/]"},
@@ -227,7 +226,7 @@ public static class Loc
         {"Sync_Result_Title", "Результат"}, 
         {"Sync_NoLocal", "[gray]Локальні профілі не знайдені.[/]"},
         {"Reason_NewProgress", "[green]Новий прогрес[/]"},
-        {"Reason_Pending", "[blue]Відкладена синхр[/]"},
+        {"Reason_Pending", "[blue]Відкладена синхронізація[/]"},
         {"Result_Conflict", "[red]Конфлікт[/]"},
         {"Result_RemoteNewer", "У хмарі новіше"},
         {"Result_Sent", "[green]Надіслано[/]"},
