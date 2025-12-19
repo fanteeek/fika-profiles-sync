@@ -38,14 +38,16 @@ class Program
         var syncer = new ProfileSync(config, github);
         bool shouldLaunch;
         
+        string owner = "", repo = "";
+
         if (isAuthSuccess)
         {
             try
             {
-                var repoInfo = github.ExtractRepoInfo(config.RepoUrl);
-                Logger.Info(Loc.Tr("Repo_Target", repoInfo.Owner, repoInfo.Repo));
+                (owner, repo) = github.ExtractRepoInfo(config.RepoUrl);
+                Logger.Debug(Loc.Tr("Repo_Target", owner, repo));
 
-                await syncer.PerformStartupSync(repoInfo.Owner, repoInfo.Repo);
+                await syncer.PerformStartupSync(owner, repo);
 
                 shouldLaunch = true;
             }
@@ -76,8 +78,7 @@ class Program
 
                 try 
                  {
-                    var repoInfo = github.ExtractRepoInfo(config.RepoUrl);
-                    await syncer.PerformShutdownSync(repoInfo.Owner, repoInfo.Repo);
+                    await syncer.PerformShutdownSync(owner, repo);
                  }
                  catch (Exception ex)
                  {

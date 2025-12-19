@@ -9,7 +9,7 @@ public static class Loc
 
     private static readonly Dictionary<string, string> _en = new()
     {
-        // Program & General
+        // general
         {"App_Started", "Application started. Args: {0}"},
         {"Debug_Enabled", "Debug mode enabled via arguments"},
         {"Config_Loading", "Loading configuration..."},
@@ -21,8 +21,8 @@ public static class Loc
         {"Start_Game_NoSync", "Start the game without synchronization?"},
         {"Launch_Canceled", "[gray]Launch canceled.[/]"},
         {"Press_Enter", "Press [blue]Enter[/] to exit."},
-        
-        // Config
+
+        // config
         {"Token_NotFound", "[yellow]![/] GitHub Token not found."},
         {"Token_Prompt", "Enter your [green]GitHub PAT[/]:"},
         {"Token_Invalid", "[white on red]×[/] The token is too short!"},
@@ -32,18 +32,29 @@ public static class Loc
         {"Config_Saved", "[green]√[/] Settings are saved in the .env file."},
         {"Env_Error", "[white on red]×[/] Error writing .env: {0}"},
 
-        // Updater
+        // updater
         {"Update_Available", "[bold red]UPDATE AVAILABLE[/]"},
         {"Update_Body", "[yellow]New version available:[/] [green]v{0}[/]\nYour version: [gray]v{1}[/]\n\nDownload: [blue underline]{2}[/]"},
         {"Update_Latest", "[gray]The program version is up to date. (v{0})[/]"},
+        {"Update_Found", "[bold yellow]New version found:[/] [green]v{0}[/]"},
+        {"Update_Ask", "Do you want to update now?"},
+        {"Update_Downloading", "[gray]Downloading update...[/]"},
+        {"Update_Extracting", "[gray]Installing update...[/]"},
+        {"Update_Success", "[green]Update successful! The application will restart.[/]"},
+        {"Update_Fail", "[red]Update failed: {0}[/]"},
+        {"Update_AssetNotFound", "[red]Release asset not found in the repository![/]"},
 
-        // ProfileSync (Startup)
+        // profilesync (startup)
         {"Sync_Downloading", "[gray]Downloading cloud profiles...[/]"},
         {"Sync_NoProfiles", "[yellow]![/] No profiles found in the cloud (Repository is empty)."},
         {"Sync_Found", "[bold]Profiles in cloud:[/] {0}"},
         {"Sync_Updated_Count", "[green]Updated {0} profiles from cloud.[/]"},
+        {"Sync_Backup", "[green] Created backup: [/] {0}"},
+        {"Sync_Backup_Failed", "Failed backup: [/] {0}"},
+        {"Sync_Backup_DeletedOld", "Deleted old backup: [/] {0}"},
+        {"Sync_Backup_Failed_DeletedOld", "Failed deleted old backup: [/] {0}: {1}"},
         
-        // ProfileSync (Table)
+        // profilesync (table)
         {"Table_File", "File"},
         {"Table_Status", "Status"},
         {"Table_Action", "Action"},
@@ -55,7 +66,7 @@ public static class Loc
         {"Action_WillUpload", "[yellow]Will Upload Later[/]"},
         {"Action_Downloaded", "[green]Downloaded[/]"},
         
-        // ProfileSync (Shutdown)
+        // profilesync (shutdown)
         {"Sync_Title", "[yellow]Synchronization[/]"},
         {"Sync_Checking", "[gray]Checking for changes to upload...[/]"},
         {"Sync_Report_Title", "Synchronization Report"},
@@ -72,7 +83,7 @@ public static class Loc
         {"Sync_AllDone", "[gray]Everything is synchronized.[/]"},
         {"Verify_Remote", "[gray]Verifying remote version: {0}...[/]"},
 
-        // GameLauncher
+        // gameLauncher
         {"Server_NotFound", "Server file not found: {0}"},
         {"Config_Found", "[gray]Configuration found:[/] {0} -> [blue]{1}:{2}[/]"},
         {"Config_Default", "[gray]Configs not found, using default:[/]{0}:{1}"},
@@ -91,13 +102,17 @@ public static class Loc
         {"Server_Stopping", "[gray]I'm shutting down the server...[/]"},
         {"Server_Stopped", "[green]√[/] The server has been shut down."},
         
-        // GitHub
+        // github
         {"Auth_Success", "[green]√[/] Authorized as: [bold]{0}[/]"}, //debug
-        {"File_Sent", "[green]√[/] File sent: {0}"}
+        {"File_Sent", "[green]√[/] File sent: {0}"},
+        {"Ignore_Loaded", "[gray]Loaded .fikaignore: {0} rules.[/]"},
+        {"Ignore_File", "[gray]Ignored file: {0}[/]"},
+        {"Progress_Downloading", "Downloading..."},
     };
 
     private static readonly Dictionary<string, string> _ru = new()
     {
+        // general
         {"App_Started", "Приложение запущено. Аргументы: {0}"},
         {"Debug_Enabled", "Режим отладки включен через аргументы"},
         {"Config_Loading", "Загрузка конфигурации..."},
@@ -122,12 +137,20 @@ public static class Loc
         {"Update_Available", "[bold red]ДОСТУПНО ОБНОВЛЕНИЕ[/]"},
         {"Update_Body", "[yellow]Новая версия:[/] [green]v{0}[/]\nВаша версия: [gray]v{1}[/]\n\nСкачать: [blue underline]{2}[/]"},
         {"Update_Latest", "[gray]У вас последняя версия программы. (v{0})[/]"},
+        {"Update_Found", "[bold yellow]Найдена новая версия:[/] [green]v{0}[/]"},
+        {"Update_Ask", "Хотите обновиться сейчас?"},
+        {"Update_Downloading", "[gray]Скачивание обновления...[/]"},
+        {"Update_Extracting", "[gray]Установка обновления...[/]"},
+        {"Update_Success", "[green]Обновление завершено! Приложение будет перезапущено.[/]"},
+        {"Update_Fail", "[red]Ошибка обновления: {0}[/]"},
+        {"Update_AssetNotFound", "[red]Файл обновления не найден в репозитории![/]"},
 
         {"Sync_Title", "[yellow]Синхронизация[/]"},
         {"Sync_Downloading", "[gray]Загрузка профилей из облака...[/]"},    
         {"Sync_NoProfiles", "[yellow]![/] В облаке нет профилей (Репозиторий пуст)."},
         {"Sync_Found", "[bold]Профилей в облаке:[/] {0}"},
         {"Sync_Updated_Count", "[green]Обновлено {0} профилей из облака.[/]"},
+        {"Sync_Backup", "[green] Сделана резервная копия - [/] {0}"},
         
         {"Table_File", "Файл"},
         {"Table_Status", "Статус"},
@@ -172,8 +195,12 @@ public static class Loc
         {"Server_Stopping", "[gray]Выключаю сервер...[/]"},
         {"Server_Stopped", "[green]√[/] Сервер выключен."},
         
+        // github
         {"Auth_Success", "[green]√[/] Авторизован как: [bold]{0}[/]"},
-        {"File_Sent", "[green]√[/] Файл отправлен: {0}"}
+        {"File_Sent", "[green]√[/] Файл отправлен: {0}"},
+        {"Ignore_Loaded", "[gray]Загружен .fikaignore: {0} правил.[/]"},
+        {"Ignore_File", "[gray]Игнорируется файл: {0}[/]"},
+        {"Progress_Downloading", "Скачивание..."},
     };
 
     private static readonly Dictionary<string, string> _uk = new()
@@ -202,12 +229,20 @@ public static class Loc
         {"Update_Available", "[bold red]ДОСТУПНЕ ОНОВЛЕННЯ[/]"},
         {"Update_Body", "[yellow]Нова версія:[/] [green]v{0}[/]\nВаша версія: [gray]v{1}[/]\n\nЗавантажити: [blue underline]{2}[/]"},
         {"Update_Latest", "[gray]У вас остання версія програми. (v{0})[/]"},
+        {"Update_Found", "[bold yellow]Знайдена нова версія:[/] [green]v{0}[/]"},
+        {"Update_Ask", "Бажаєте оновитися зараз?"},
+        {"Update_Downloading", "[gray]Завантаження оновлення...[/]"},
+        {"Update_Extracting", "[gray]Встановлення оновлення...[/]"},
+        {"Update_Success", "[green]Оновлення завершено! Додаток буде перезапущено.[/]"},
+        {"Update_Fail", "[red]Помилка оновлення: {0}[/]"},
+        {"Update_AssetNotFound", "[red]Файл оновлення не знайдено в репозиторії![/]"},
 
         {"Sync_Title", "[yellow]Синхронізація[/]"},
         {"Sync_Downloading", "[gray]Завантаження профілів з облака...[/]"},
         {"Sync_NoProfiles", "[yellow]![/] У хмарі немає профілів (Репозиторій порожній)."},
         {"Sync_Found", "[bold]Профілів у хмарі:[/] {0}"},
         {"Sync_Updated_Count", "[green]Оновлено {0} профілів з облака.[/]"},
+        {"Sync_Backup", "[green] Cтворено резервну копію - [/] {0}"},
         
         {"Table_File", "Файл"},
         {"Table_Status", "Статус"},
@@ -253,7 +288,10 @@ public static class Loc
         {"Server_Stopped", "[green]√[/] Сервер вимкнено."},
         
         {"Auth_Success", "[green]√[/] Авторизовано як: [bold]{0}[/]"},
-        {"File_Sent", "[green]√[/] Файл надіслано: {0}"}
+        {"File_Sent", "[green]√[/] Файл надіслано: {0}"},
+        {"Ignore_Loaded", "[gray]Завантажено .fikaignore: {0} правил.[/]"},
+        {"Ignore_File", "[gray]Ігнорується файл: {0}[/]"},
+        {"Progress_Downloading", "Завантаження..."},
     };
 
     static Loc()
