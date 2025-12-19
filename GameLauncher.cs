@@ -56,10 +56,26 @@ public class GameLauncher
 
                     if (node == null) continue;
 
-                    int? port = node["port"]?.GetValue<int>();
-                    string? ip = node["ip"]?.ToString();
+                    JsonNode? settingsNode = node;
+
+                    var fikaNode = node["server"]?["SPT"]?["http"];
+                    
+                    if (fikaNode != null)
+                    {
+                        Logger.Debug($"Fika config: {path}");
+                        settingsNode = fikaNode;
+                    }
+
+                    int? port = settingsNode["port"]?.GetValue<int>();
+                    string? ip = settingsNode["ip"]?.GetValue<string>();
 
                     if (port.HasValue) _targetPort = port.Value;
+
+                    string portString = port?.ToString() ?? "0";
+                    string ipString = ip ?? ""; 
+                    
+                    Logger.Debug($"ip:{ipString}, port:{portString}");
+
                     if (!string.IsNullOrEmpty(ip))
                         _targetIp = (ip == "0.0.0.0") ? "127.0.0.1" : ip;
 
