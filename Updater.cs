@@ -1,4 +1,7 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Spectre.Console;
 
 namespace FikaSync;
@@ -20,27 +23,25 @@ public class Updater
     {
         try
         {
+            CleanupOldFiles();
+
             if (!Version.TryParse(_config.AppVersion, out Version? currentVersion))
                 currentVersion = new Version(0,0,0);
             
-            string url = $"/repos/{UpdateRepo}/releases/latest";
             var releaseInfo = await _client.GetLatestReleaseInfo(UpdateRepo);
             if (releaseInfo == null) return; 
 
             string tagName = releaseInfo.Value.TagName.TrimStart('v');
-            string htmlUrl = releaseInfo.Value.HtmlUrl;
+            string downloadUrl = releaseInfo.Value.DownloadUrl;
 
             if (Version.TryParse(tagName, out Version? latestVersion))
             {
                 if (latestVersion > currentVersion)
                 {
-                    var panel = new Panel(Loc.Tr("Update_Body", latestVersion, currentVersion, htmlUrl));
-                    panel.Header = new PanelHeader(Loc.Tr("Update_Available"));
-                    panel.Border = BoxBorder.Double;
-                    panel.Padding = new Padding(2, 1, 2, 1);
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.Write(panel);
-                    AnsiConsole.WriteLine();
+                    Logger.Info(Loc.Tr("Update_Found", latestVersion));
+
+                    if (AnsiConsole.Confirm(Loc.Tr("Update_Ask"), defaultValue: true))
+                        await PerformUpdate(downloadUrl);
                 }
                 else
                 {
@@ -50,7 +51,59 @@ public class Updater
         }
         catch (Exception ex)
         {
-            Logger.Error(Loc.Tr("Result_Error", ex.Message));
+            Logger.Error(Loc.Tr("Update_Fail", ex.Message));
         }
+    }
+
+    private async Task PerformUpdate(string url)
+    {
+        string currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+        if (string.IsNullOrEmpty(currentExe)) return;
+        string tempFile = Path.Combine(_config.BaseDir, "update");
+
+        try
+        {
+            // download
+            await AnsiConsole.Status()
+                .StartAsync(Loc.Tr("Update_Downloading"), async ctx =>
+                {
+                    bool success = await _client.DownloadAsset(url, tempFile);
+                    if (!success) throw new Exception("Download failed");
+                });
+            
+            // install
+            Logger.Info(Loc.Tr("Update_Extracting"));
+
+            string oldExe = currentExe + ".old";
+            if (File.Exists(oldExe)) File.Delete(oldExe);
+            File.Move(currentExe, oldExe);
+
+            File.Move(tempFile, currentExe);
+            Logger.Info(Loc.Tr("Update_Success"));
+
+            await Task.Delay(1500);
+            AnsiConsole.Clear();
+
+            Process.Start(currentExe);
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            string oldExe = currentExe + ".old";
+            if (File.Exists(oldExe) && !File.Exists(currentExe))
+                File.Move(oldExe, currentExe);
+            Logger.Error(Loc.Tr("Update_Fail", ex.Message));
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    private void CleanupOldFiles()
+    {
+        try
+        {
+            string currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+            string oldExe = currentExe + ".old";
+            if (File.Exists(oldExe)) File.Delete(oldExe);
+        }catch {}
     }
 }

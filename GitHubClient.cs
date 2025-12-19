@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
-using Spectre.Console;
 
 namespace FikaSync;
 
@@ -27,7 +26,7 @@ public class GitHubClient
             {
                 var json = await response.Content.ReadAsStringAsync();
                 var login = JsonNode.Parse(json)?["login"]?.ToString() ?? "Unknown";
-                Logger.Info(Loc.Tr("Auth_Success", login));
+                Logger.Debug(Loc.Tr("Auth_Success", login));
                 return true;
             }
             Logger.Error(Loc.Tr("Result_Error", response.StatusCode));
@@ -78,7 +77,6 @@ public class GitHubClient
             string base64 = Convert.ToBase64String(content);
             string? sha = null;
 
-            // Get existing SHA to update
             try
             {
                 var getRes = await _client.GetAsync(url);
@@ -113,7 +111,6 @@ public class GitHubClient
         {
             string url = $"/repos/{owner}/{repo}/contents/{filePath}";
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            // Просим raw контент
             req.Headers.Accept.Clear(); 
             req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3.raw"));
 
@@ -127,16 +124,50 @@ public class GitHubClient
         }
     }
 
-    public async Task<(string TagName, string HtmlUrl)?> GetLatestReleaseInfo(string repoName)
+    public async Task<(string TagName, string DownloadUrl)?> GetLatestReleaseInfo(string repoName)
     {
         try
         {
             var res = await _client.GetAsync($"/repos/{repoName}/releases/latest");
             if (!res.IsSuccessStatusCode) return null;
-            var json = await res.Content.ReadAsStringAsync();
-            var node = JsonNode.Parse(json);
-            return (node?["tag_name"]?.ToString() ?? "", node?["html_url"]?.ToString() ?? "");
+
+            var node = JsonNode.Parse(await res.Content.ReadAsStringAsync());
+            string tag = node?["tag_name"]?.ToString() ?? "";
+            var assets = node?["assets"]?.AsArray();
+
+            if (assets == null) return null;
+
+            foreach (var asset in assets)
+            {
+                string name = asset?["name"]?.ToString() ?? "";
+                string url = asset?["browser_download_url"]?.ToString() ?? "";
+
+                if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (tag, url);
+                }
+            }
+
+            return null;
         }
         catch { return null; }
+    }
+
+    public async Task<bool> DownloadAsset(string url, string savePath)
+    {
+        try
+        {
+            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            if (!response.IsSuccessStatusCode) return false;
+
+            using var fs = new FileStream(savePath, FileMode.Create);
+            await response.Content.CopyToAsync(fs);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Asset download error: {ex.Message}");
+            return false;
+        }
     }
 }
