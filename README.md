@@ -60,7 +60,7 @@ If you want to modify the code or build it yourself:
 
 ## Troubleshooting
 
-*   **"Server port timeout"**: Ensure your `http.json` or `fika.jsonc` allows connection. The tool tries to parse the port automatically.
+*   **"Server port timeout"**: Ensure your `http.json` or `fika.jsonc` allows connection. The tool tries to parse the ip/port automatically.
 *   **"Unauthorized"**: Check your `.env` file and ensure your GitHub Token is valid and has `Contents: Read and Write` permissions.
 *   **Debug Mode**: Run the tool with the `-d` flag to see detailed logs about paths and connection:
     ```powershell
