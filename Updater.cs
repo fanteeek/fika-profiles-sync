@@ -1,7 +1,4 @@
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using Spectre.Console;
 
 namespace FikaSync;
@@ -58,8 +55,11 @@ public class Updater
     private async Task PerformUpdate(string url)
     {
         string currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+        string appDir = AppDomain.CurrentDomain.BaseDirectory;
+        string tempArchive = Path.Combine(_config.BaseDir, "update.7z");
+        string tempExtractorDir = Path.Combine(_config.BaseDir, "update_temp");
+
         if (string.IsNullOrEmpty(currentExe)) return;
-        string tempFile = Path.Combine(_config.BaseDir, "update");
 
         try
         {
@@ -67,20 +67,25 @@ public class Updater
             await AnsiConsole.Status()
                 .StartAsync(Loc.Tr("Update_Downloading"), async ctx =>
                 {
-                    bool success = await _client.DownloadAsset(url, tempFile);
+                    bool success = await _client.DownloadAsset(url, tempArchive);
                     if (!success) throw new Exception("Download failed");
                 });
             
             // install
             Logger.Info(Loc.Tr("Update_Extracting"));
 
+            string? sourceUpdateDir = await Task.Run(() => FileManager.Extract7z(tempArchive, tempExtractorDir));
+
+            if (string.IsNullOrEmpty(sourceUpdateDir)) throw new Exception("Failed to extract update archive.");
+            
+            Logger.Info(Loc.Tr("Update_Install"));
+
             string oldExe = currentExe + ".old";
             if (File.Exists(oldExe)) File.Delete(oldExe);
             File.Move(currentExe, oldExe);
+            FileManager.CopyDirectory(sourceUpdateDir, appDir);
 
-            File.Move(tempFile, currentExe);
             Logger.Info(Loc.Tr("Update_Success"));
-
             await Task.Delay(1500);
             AnsiConsole.Clear();
 
@@ -89,11 +94,15 @@ public class Updater
         }
         catch (Exception ex)
         {
+            Logger.Error(Loc.Tr("Update_Fail", ex.Message));
+
             string oldExe = currentExe + ".old";
             if (File.Exists(oldExe) && !File.Exists(currentExe))
-                File.Move(oldExe, currentExe);
-            Logger.Error(Loc.Tr("Update_Fail", ex.Message));
-            if (File.Exists(tempFile)) File.Delete(tempFile);
+                try {File.Move(oldExe, currentExe); } catch {}
+        } finally
+        {
+            if (File.Exists(tempArchive)) File.Delete(tempArchive);
+            FileManager.ForceDeleteDirectory(tempExtractorDir);
         }
     }
 

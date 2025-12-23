@@ -39,10 +39,12 @@ public static class Loc
         {"Update_Found", "[bold yellow]New version found:[/] [green]v{0}[/]"},
         {"Update_Ask", "Do you want to update now?"},
         {"Update_Downloading", "[gray]Downloading update...[/]"},
-        {"Update_Extracting", "[gray]Installing update...[/]"},
+        {"Update_Extracting", "[gray]Extracting update...[/]"},
         {"Update_Success", "[green]Update successful! The application will restart.[/]"},
         {"Update_Fail", "[red]Update failed: {0}[/]"},
         {"Update_AssetNotFound", "[red]Release asset not found in the repository![/]"},
+        {"Update_Install", "[gray]Installing update...[/]"},
+
 
         // profilesync (startup)
         {"Sync_Downloading", "[gray]Downloading cloud profiles...[/]"},
@@ -140,7 +142,8 @@ public static class Loc
         {"Update_Found", "[bold yellow]Найдена новая версия:[/] [green]v{0}[/]"},
         {"Update_Ask", "Хотите обновиться сейчас?"},
         {"Update_Downloading", "[gray]Скачивание обновления...[/]"},
-        {"Update_Extracting", "[gray]Установка обновления...[/]"},
+        {"Update_Extracting", "[gray]Распаковка обновления...[/]"},
+        {"Update_Install", "[gray]Установка обновления...[/]"},
         {"Update_Success", "[green]Обновление завершено! Приложение будет перезапущено.[/]"},
         {"Update_Fail", "[red]Ошибка обновления: {0}[/]"},
         {"Update_AssetNotFound", "[red]Файл обновления не найден в репозитории![/]"},
@@ -232,7 +235,8 @@ public static class Loc
         {"Update_Found", "[bold yellow]Знайдена нова версія:[/] [green]v{0}[/]"},
         {"Update_Ask", "Бажаєте оновитися зараз?"},
         {"Update_Downloading", "[gray]Завантаження оновлення...[/]"},
-        {"Update_Extracting", "[gray]Встановлення оновлення...[/]"},
+        {"Update_Extracting", "[gray]Вилучення оновлення...[/]"},
+        {"Update_Install", "[gray]Встановлення оновлення...[/]"},
         {"Update_Success", "[green]Оновлення завершено! Додаток буде перезапущено.[/]"},
         {"Update_Fail", "[red]Помилка оновлення: {0}[/]"},
         {"Update_AssetNotFound", "[red]Файл оновлення не знайдено в репозиторії![/]"},

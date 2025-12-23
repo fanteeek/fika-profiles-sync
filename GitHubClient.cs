@@ -157,6 +157,10 @@ public class GitHubClient
     {
         try
         {
+            var directory = Path.GetDirectoryName(savePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
             using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
             if (!response.IsSuccessStatusCode) return false;
 
