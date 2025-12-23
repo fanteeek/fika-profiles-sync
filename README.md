@@ -1,11 +1,11 @@
-# Fika Profile Sync
+# FikaSync
 
 ![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)
 ![.NET 9.0](https://img.shields.io/badge/.NET%209.0-512BD4?logo=dotnet&logoColor=white)
 ![Platform](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**Fika Profile Sync** is an automated tool designed for the **Fika Project** (a multiplayer mod for **SPT Tarkov**). It allows you and your friends to seamlessly synchronize game profiles via a private GitHub repository.
+**FikaSync** is an automated tool designed for the **Fika Project** (a multiplayer mod for **SPT Tarkov**). It allows you and your friends to seamlessly synchronize game profiles via a private GitHub repository.
 
 ## Features
 
@@ -60,7 +60,7 @@ If you want to modify the code or build it yourself:
 
 ## Troubleshooting
 
-*   **"Server port timeout"**: Ensure your `http.json` or `fika.jsonc` allows connection. The tool tries to parse the port automatically.
+*   **"Server port timeout"**: Ensure your `http.json` or `fika.jsonc` allows connection. The tool tries to parse the ip/port automatically.
 *   **"Unauthorized"**: Check your `.env` file and ensure your GitHub Token is valid and has `Contents: Read and Write` permissions.
 *   **Debug Mode**: Run the tool with the `-d` flag to see detailed logs about paths and connection:
     ```powershell
