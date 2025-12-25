@@ -48,6 +48,8 @@ public static class Loc
 
         // profilesync (startup)
         {"Sync_Downloading", "[gray]Downloading cloud profiles...[/]"},
+        {"Sync_DownloadFail", "Failed to download repository."},
+        {"Sync_EmptyRepo", "Repository might be empty. Initializing..."},
         {"Sync_NoProfiles", "[yellow]![/] No profiles found in the cloud (Repository is empty)."},
         {"Sync_Found", "[bold]Profiles in cloud:[/] {0}"},
         {"Sync_Updated_Count", "[green]Updated {0} profiles from cloud.[/]"},
@@ -149,7 +151,9 @@ public static class Loc
         {"Update_AssetNotFound", "[red]Файл обновления не найден в репозитории![/]"},
 
         {"Sync_Title", "[yellow]Синхронизация[/]"},
-        {"Sync_Downloading", "[gray]Загрузка профилей из облака...[/]"},    
+        {"Sync_Downloading", "[gray]Загрузка профилей из облака...[/]"},
+        {"Sync_DownloadFail", "Не удалось скачать репозиторий."},
+        {"Sync_EmptyRepo", "Возможно, репозиторий пуст. Инициализация..."},
         {"Sync_NoProfiles", "[yellow]![/] В облаке нет профилей (Репозиторий пуст)."},
         {"Sync_Found", "[bold]Профилей в облаке:[/] {0}"},
         {"Sync_Updated_Count", "[green]Обновлено {0} профилей из облака.[/]"},
@@ -176,7 +180,7 @@ public static class Loc
         {"Result_Conflict", "[red]Конфликт[/]"},
         {"Result_RemoteNewer", "В облаке новее"},
         {"Result_Sent", "[green]Отправлен[/]"},
-        {"Result_Error", "[red]Ошибка: {0}[/]"},
+        {"Result_Error", "Ошибка: {0}"},
         {"Sync_AllDone", "[gray]Всё синхронизировано.[/]"},
         {"Verify_Remote", "[gray]Проверка версии на сервере: {0}...[/]"},
 
@@ -243,6 +247,8 @@ public static class Loc
 
         {"Sync_Title", "[yellow]Синхронізація[/]"},
         {"Sync_Downloading", "[gray]Завантаження профілів з облака...[/]"},
+        {"Sync_EmptyRepo", "Можливо, репозиторій порожній. Ініціалізація..."},
+        {"Sync_DownloadFail", "Не вдалося завантажити репозиторій."},
         {"Sync_NoProfiles", "[yellow]![/] У хмарі немає профілів (Репозиторій порожній)."},
         {"Sync_Found", "[bold]Профілів у хмарі:[/] {0}"},
         {"Sync_Updated_Count", "[green]Оновлено {0} профілів з облака.[/]"},

@@ -77,8 +77,25 @@ public class ProfileSync
                     downloaded = await _client.DownloadRepository(owner, repo, tempZip);
                 });
 
-            if (!downloaded) throw new Exception(Loc.Tr("Result_Error"));
-
+            if (!downloaded)
+            {  
+                Logger.Info(Loc.Tr("Sync_EmptyRepo"));
+                bool initialized = await _client.CreateReadme(owner, repo);
+                if (initialized)
+                {
+                    await Task.Delay(1000);
+                    await AnsiConsole.Status().StartAsync(Loc.Tr("Sync_Downloading"), async ctx =>
+                    {
+                        downloaded = await _client.DownloadRepository(owner, repo, tempZip);
+                    });
+                }
+                if (!downloaded)
+                {
+                    throw new Exception(Loc.Tr("Sync_DownloadFail"));
+                }
+                    
+            }
+               
             string? contentDir = FileManager.ExtractZip(tempZip, extractPath);
 
             var remoteFiles = contentDir != null ? FileManager.FindProfiles(contentDir) : new List<string>();
@@ -385,7 +402,7 @@ public class ProfileSync
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(Loc.Tr("Sync_Backup_Failed_DeletedOld",oldDir.Name, ex.Message));
+                    Logger.Error(Loc.Tr("Sync_Backup_Failed_DeletedOld", oldDir.Name, ex.Message));
                 }
             }
         }

@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace FikaSync;
@@ -12,7 +14,7 @@ public class GitHubClient
     {
         _client = new HttpClient();
         _client.BaseAddress = new Uri("https://api.github.com");
-        _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("FikaSync", "1.0"));
+        _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("FikaSync", "0.3.3"));
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", token);
         _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
     }
@@ -39,12 +41,49 @@ public class GitHubClient
         }
     }
 
+    public async Task<bool> CreateReadme(string owner, string repo)
+    {
+        try
+        {
+            string requestUri = $"/repos/{owner}/{repo}/contents/README.md";
+
+            string content = "# FikaSync Storage\nThis repository is used to store game profiles.";
+            string base64Content = Convert.ToBase64String(Encoding.UTF8.GetBytes(content));
+
+            var payload = new
+            {
+                message = "Initial commit: create README",
+                content = base64Content
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            
+            using var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
+            using var response = await _client.PutAsync(requestUri, httpContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var errorDetails = await response.Content.ReadAsStringAsync();
+            Logger.Error(Loc.Tr("Result_Error", errorDetails));
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
+            return false;
+        }
+    }
+
     public (string Owner, string Repo) ExtractRepoInfo(string url)
     {
         var cleanUrl = url.Trim().TrimEnd('/').Replace(".git", "");
         var parts = cleanUrl.Split('/');
-        if (parts.Length >= 2) return (parts[^2], parts[^1]);
-        throw new ArgumentException(Loc.Tr("Result_Error", url));
+        if (parts.Length < 2)
+            throw new ArgumentException($"Invalid URL format: {url}");
+        return (parts[^2], parts[^1]);
     }
 
     public async Task<bool> DownloadRepository(string owner, string repo, string savePath)
@@ -171,7 +210,7 @@ public class GitHubClient
         }
         catch (Exception ex)
         {
-            Logger.Error($"Asset download error: {ex.Message}");
+            Logger.Error(Loc.Tr("Result_Error", ex.Message));
             return false;
         }
     }
