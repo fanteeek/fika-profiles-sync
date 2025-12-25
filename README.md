@@ -11,6 +11,7 @@
 
 *   **No Manual File Transfers:** Eliminates the need to manually send save files to the host or transfer them back to clients after playing solo. Everyone's progress is kept up-to-date on the server automatically.
 *   **Smart Synchronization:** Automatically handles download and upload of profiles based on file modification time.
+*   **.fikaignore Support:** Full control over your shared data. List specific profile files or directories in a .fikaignore file (similar to .gitignore) to prevent them from being uploaded to the shared repository (e.g., for keeping a solo profile private).
 *   **Built with [Spectre.Console](https://github.com/spectreconsole/spectre.console):** Features a modern, beautiful, and interactive terminal interface.
 
 ## Prerequisites
