@@ -48,7 +48,7 @@ public static class Logger
 
     public static void Error(string message)
     {
-        AnsiConsole.MarkupLineInterpolated($"[red][white on red]×[/]{message}[/]");
+        AnsiConsole.MarkupLineInterpolated($"[red][white on red]![/] {message}[/]");
         LogToFile("ERROR", message);
     }
 

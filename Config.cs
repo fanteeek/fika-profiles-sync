@@ -18,11 +18,9 @@ public class Config
     
     public Config()
     {
-        // Version
         var v = Assembly.GetEntryAssembly()?.GetName().Version;
         if (v != null) AppVersion = $"{v.Major}.{v.Minor}.{v.Build}";
 
-        // BaseDir
         BaseDir = AppContext.BaseDirectory;
 
         GameProfilesPath = Path.Combine(BaseDir, "SPT", "user", "profiles");
@@ -41,7 +39,7 @@ public class Config
             Env.Load(envPath);
         }
 
-        GithubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? ""; // ?? "" значит "если null, то верни пустую строку"
+        GithubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? "";
         RepoUrl = Environment.GetEnvironmentVariable("REPO_URL") ?? "";
     }
 
@@ -49,11 +47,9 @@ public class Config
     {
         bool configChanged = false;
 
-        // check token
         if (string.IsNullOrWhiteSpace(GithubToken))
         {
             Logger.Info(Loc.Tr("Token_NotFound"));
-
             GithubToken = AnsiConsole.Prompt(
                 new TextPrompt<string>(Loc.Tr("Token_Prompt"))
                     .Secret()
@@ -66,7 +62,6 @@ public class Config
             configChanged = true;
         }
 
-        // check Url
         if (string.IsNullOrWhiteSpace(RepoUrl))
         {
             Logger.Info(Loc.Tr("Url_NotFound"));

@@ -84,7 +84,7 @@ public class GameLauncher
                 }
                 catch (Exception ex)
                 {
-                    Logger.Debug($"Failed to parse config {path}: {ex.Message}");
+                    Logger.Error(Loc.Tr("Failed_Parse", path, ex.Message));
                 }
             }
         }
@@ -113,7 +113,7 @@ public class GameLauncher
 
     public async Task<bool> LaunchAndMonitor()
     {
-        // Start Server
+        // server
         if (!File.Exists(_config.SptServerPath))
         {
             Logger.Error(Loc.Tr("Server_NotFound", _config.SptServerPath));
@@ -147,10 +147,10 @@ public class GameLauncher
         {
             var handle = GetConsoleWindow();
             SetForegroundWindow(handle);
-        }catch{}
+        } catch{}
 
         bool serverReady = false;
-        // Wait Server
+        // wait server
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .StartAsync(Loc.Tr("Server_Waiting"), async ctx =>
@@ -178,13 +178,9 @@ public class GameLauncher
         }
 
         if (!serverReady)
-        {
             Logger.Info(Loc.Tr("Server_Timeout"));
-        }
         else
-        {
             Logger.Info(Loc.Tr("Server_Success", _targetIp, _targetPort));
-        }
 
         var launcherInfo = new ProcessStartInfo
         {
@@ -223,7 +219,6 @@ public class GameLauncher
 
                 Logger.Info(Loc.Tr("Server_Stopped"));
             }
-
         }
         catch {}
 

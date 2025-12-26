@@ -76,17 +76,15 @@ public class Updater
             await AnsiConsole.Status()
                 .StartAsync(Loc.Tr("Update_Downloading"), async ctx =>
                 {
-                    bool success = await _client.DownloadAsset(url, tempArchive);
-                    if (!success) throw new Exception("Download failed");
+                    await _client.DownloadAsset(url, tempArchive);
                 });
             
-            // install
+            // extract
             Logger.Info(Loc.Tr("Update_Extracting"));
-
             string? sourceUpdateDir = await Task.Run(() => FileManager.Extract7z(tempArchive, tempExtractorDir));
-
-            if (string.IsNullOrEmpty(sourceUpdateDir)) throw new Exception("Failed to extract update archive.");
+            if (string.IsNullOrEmpty(sourceUpdateDir)) throw new Exception(Loc.Tr("Update_Extract_Failed"));
             
+            // install
             Logger.Info(Loc.Tr("Update_Install"));
 
             string oldExe = currentExe + ".old";
@@ -119,6 +117,6 @@ public class Updater
             string currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
             string oldExe = currentExe + ".old";
             if (File.Exists(oldExe)) File.Delete(oldExe);
-        }catch {}
+        } catch {}
     }
 }

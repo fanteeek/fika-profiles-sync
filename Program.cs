@@ -5,7 +5,6 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        //debug
         SetupLogger(args);
         var config = new Config();
 
@@ -22,12 +21,12 @@ class Program
         Logger.Info(Loc.Tr("Config_Loading"));
         Logger.Debug($"Working folder: [blue]{config.BaseDir}[/]");
         Logger.Debug($"Path to profiles: [blue]{config.GameProfilesPath}[/]");
-        Logger.Debug($"GitHub Token: [blue]{(string.IsNullOrEmpty(config.GithubToken) ? "[red]Not found[/]" : $"[blue]{config.GithubToken}[/]")}[/]");
-        Logger.Debug($"GitHub URL: [blue]{(string.IsNullOrEmpty(config.RepoUrl) ? "[red]Not found[/]" : $"[blue]{config.RepoUrl}[/]")}[/]");
+        Logger.Debug($"GitHub Token: [blue]{config.GithubToken}[/]");
+        Logger.Debug($"GitHub URL: [blue]{config.RepoUrl}[/]");
 
         // git
         Logger.Info(Loc.Tr("Conn_GitHub"));
-        var github = new GitHubClient(config.GithubToken);
+        var github = new GitHubClient(config.GithubToken, config.AppVersion);
 
         var updater = new Updater(github, config);
         await updater.CheckForUpdates();
@@ -101,7 +100,7 @@ class Program
 
     static void PrintHeader(Config config)
     {
-        string v = Logger.IsDebugEnabled ? "(DEBUG)" : "";
-        Logger.Info($"[white on teal] FikaSync v{config.AppVersion}{v} \n[/]");
+        string v = Logger.IsDebugEnabled ? "DEBUG" : "";
+        Logger.Info($"[white on darkcyan] FikaSync v{config.AppVersion} {v} \n[/]");
     }
 }

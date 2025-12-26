@@ -38,6 +38,7 @@ public class ProfileSync
                     "# Lines starting with # are comments.\n" +
                     "# Example:\n" +
                     "# Tested_Profile.json\n");
+                Logger.Info(Loc.Tr("Ignore_Create"));
             } catch {}
         }
 
@@ -69,32 +70,33 @@ public class ProfileSync
 
         try
         {
-            bool downloaded = false;
+            Func<Task> runDownload = async () =>
+            {
+                await AnsiConsole.Status()
+                    .StartAsync(Loc.Tr("Sync_Downloading"), async ctx =>
+                    {
+                        await _client.DownloadRepository(owner, repo, tempZip);
+                    });
+            };
+                
 
-            await AnsiConsole.Status()
-                .StartAsync(Loc.Tr("Sync_Downloading"), async ctx =>
-                {
-                    downloaded = await _client.DownloadRepository(owner, repo, tempZip);
-                });
-
-            if (!downloaded)
-            {  
+            try
+            {
+                await runDownload();
+            } 
+            catch (Exception ex)
+            {
+                Logger.Error(Loc.Tr("Result_Error", ex.Message));
                 Logger.Info(Loc.Tr("Sync_EmptyRepo"));
                 bool initialized = await _client.CreateReadme(owner, repo);
                 if (initialized)
                 {
-                    await Task.Delay(1000);
-                    await AnsiConsole.Status().StartAsync(Loc.Tr("Sync_Downloading"), async ctx =>
-                    {
-                        downloaded = await _client.DownloadRepository(owner, repo, tempZip);
-                    });
+                    await Task.Delay(1500);
+                    await runDownload();
                 }
-                if (!downloaded)
-                {
-                    throw new Exception(Loc.Tr("Sync_DownloadFail"));
-                }
-                    
+                else throw;
             }
+
                
             string? contentDir = FileManager.ExtractZip(tempZip, extractPath);
 
@@ -138,7 +140,11 @@ public class ProfileSync
         Logger.Info(Loc.Tr("Sync_Checking"));
         
         var table = new Table();
-        table.Title(Loc.Tr("Sync_Report_Title")).AddColumn(Loc.Tr("Sync_Profile_Title")).AddColumn(Loc.Tr("Sync_Reason_Title")).AddColumn(Loc.Tr("Sync_Result_Title")).Border(TableBorder.Rounded);
+        table.Title(Loc.Tr("Sync_Report_Title"))
+            .AddColumn(Loc.Tr("Sync_Profile_Title"))
+            .AddColumn(Loc.Tr("Sync_Reason_Title"))
+            .AddColumn(Loc.Tr("Sync_Result_Title"))
+            .Border(TableBorder.Rounded);
 
         if (!Directory.Exists(_config.GameProfilesPath))
         {
@@ -237,10 +243,10 @@ public class ProfileSync
                 localTs = GetTimestamp(localContent);
             }
             
-            Logger.Debug($"Локальный хеш: {localHash}");
-            Logger.Debug($"Удаленный хеш: {remoteHash}");
-            Logger.Debug($"Локальное время: {localTs}");
-            Logger.Debug($"Удаленное время: {remoteTs}");
+            Logger.Debug($"LocalHash: {localHash}");
+            Logger.Debug($"remoteHash: {remoteHash}");
+            Logger.Debug($"LocalTimeStamp: {localTs}");
+            Logger.Debug($"remoteTimeStamp: {remoteTs}");
             Logger.Debug($"localTs > remoteTs: {localTs > remoteTs}");
 
             if (localHash == remoteHash || localTs == remoteTs)

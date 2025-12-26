@@ -10,11 +10,11 @@ public class GitHubClient
 {
     private readonly HttpClient _client;
     
-    public GitHubClient(string token)
+    public GitHubClient(string token, string appVersion)
     {
         _client = new HttpClient();
         _client.BaseAddress = new Uri("https://api.github.com");
-        _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("FikaSync", "0.3.3"));
+        _client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("FikaSync", $"{appVersion}"));
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", token);
         _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
     }
@@ -31,7 +31,7 @@ public class GitHubClient
                 Logger.Debug(Loc.Tr("Auth_Success", login));
                 return true;
             }
-            Logger.Error(Loc.Tr("Result_Error", response.StatusCode));
+            Logger.Error(Loc.Tr("Result_Error", response));
             return false;
         }
         catch (Exception ex)
@@ -61,13 +61,9 @@ public class GitHubClient
             using var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
             using var response = await _client.PutAsync(requestUri, httpContent);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return true;
-            }
+            if (response.IsSuccessStatusCode) return true;
 
-            var errorDetails = await response.Content.ReadAsStringAsync();
-            Logger.Error(Loc.Tr("Result_Error", errorDetails));
+            Logger.Error(Loc.Tr("Create_Readme_Failed"));
             return false;
         }
         catch (Exception ex)
@@ -86,26 +82,18 @@ public class GitHubClient
         return (parts[^2], parts[^1]);
     }
 
-    public async Task<bool> DownloadRepository(string owner, string repo, string savePath)
+    public async Task DownloadRepository(string owner, string repo, string savePath)
     {
-        try
-        {
-            string url = $"/repos/{owner}/{repo}/zipball";
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            if (!response.IsSuccessStatusCode) return false;
+        Logger.Debug($"Try download repository: {owner}/{repo}");
+        string url = $"/repos/{owner}/{repo}/zipball";
+        using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
 
-            var dir = Path.GetDirectoryName(savePath);
-            if (dir != null) Directory.CreateDirectory(dir);
+        var dir = Path.GetDirectoryName(savePath);
+        if (dir != null) Directory.CreateDirectory(dir);
 
-            using var fs = new FileStream(savePath, FileMode.Create);
-            await response.Content.CopyToAsync(fs);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(Loc.Tr("Result_Error", ex.Message));
-            return false;
-        }
+        using var fs = new FileStream(savePath, FileMode.Create);
+        await response.Content.CopyToAsync(fs);
     }
 
     public async Task<bool> UploadFile(string owner, string repo, string filePath, byte[] content)
@@ -168,7 +156,7 @@ public class GitHubClient
         try
         {
             var res = await _client.GetAsync($"/repos/{repoName}/releases/latest");
-            Logger.Debug($"GetLatestReleaseInfo: {res} | StatusCode: {res.IsSuccessStatusCode}");
+            Logger.Debug($"GetLatestReleaseInfo: {res.IsSuccessStatusCode}");
             if (!res.IsSuccessStatusCode) return null;
 
             var node = JsonNode.Parse(await res.Content.ReadAsStringAsync());
@@ -193,25 +181,17 @@ public class GitHubClient
         catch { return null; }
     }
 
-    public async Task<bool> DownloadAsset(string url, string savePath)
+    public async Task DownloadAsset(string url, string savePath)
     {
-        try
-        {
-            var directory = Path.GetDirectoryName(savePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+        Logger.Debug($"Downloading Update: {url}");
+        var directory = Path.GetDirectoryName(savePath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
 
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            if (!response.IsSuccessStatusCode) return false;
+        using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
 
-            using var fs = new FileStream(savePath, FileMode.Create);
-            await response.Content.CopyToAsync(fs);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(Loc.Tr("Result_Error", ex.Message));
-            return false;
-        }
+        using var fs = new FileStream(savePath, FileMode.Create);
+        await response.Content.CopyToAsync(fs);
     }
 }
