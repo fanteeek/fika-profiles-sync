@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 using DotNetEnv;
@@ -23,11 +24,31 @@ public class Config
 
         BaseDir = AppContext.BaseDirectory;
 
-        GameProfilesPath = Path.Combine(BaseDir, "SPT", "user", "profiles");
-        SptServerPath = Path.Combine(BaseDir, "SPT", "SPT.Server.exe");
-        SptLauncherPath = Path.Combine(BaseDir, "SPT", "SPT.Launcher.exe");
-
+        DetectGamePaths();
         LoadEnvironment();
+    }
+
+    [MemberNotNull(nameof(SptServerPath), nameof(SptLauncherPath), nameof(GameProfilesPath))]
+    private void DetectGamePaths()
+    {
+        string SPTdir = Path.Combine(BaseDir, "SPT");
+
+        if (Directory.Exists(SPTdir))
+        {
+            SptServerPath = Path.Combine(SPTdir, "SPT.Server.exe");
+            SptLauncherPath = Path.Combine(SPTdir, "SPT.Launcher.exe");
+            GameProfilesPath = Path.Combine(SPTdir, "user", "profiles");
+
+            Logger.Debug(Loc.Tr("Detected_SPT4"));
+        }
+        else
+        {
+            SptServerPath = Path.Combine(BaseDir, "SPT.Server.exe");
+            SptLauncherPath = Path.Combine(BaseDir, "SPT.Launcher.exe");
+            GameProfilesPath = Path.Combine(BaseDir, "user", "profiles");
+
+            Logger.Debug(Loc.Tr("Detected_SPT3"));
+        }
     }
 
     private void LoadEnvironment()

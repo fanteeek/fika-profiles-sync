@@ -36,6 +36,8 @@ public static class Loc
         {"Ignore_Loaded", "[gray]Loaded .fikaignore: {0} rules.[/]"},
         {"Ignore_File", "[gray]Ignored file: {0}[/]"},
         {"Failed_Parse", "Failed to parse config {0}: {1}"},
+        {"Detected_SPT3", "SPT folder not found. Using mod structure for profiles from version 3.11.x"},
+        {"Detected_SPT4", "SPT folder found. Using mod structure for profiles from version 4.x.x"},
 
         // updater
         {"Update_Available", "[bold red]UPDATE AVAILABLE[/]"},
@@ -144,6 +146,8 @@ public static class Loc
         {"Ignore_Loaded", "[gray]Загружен .fikaignore: {0} правил.[/]"},
         {"Ignore_File", "[gray]Игнорируется файл: {0}[/]"},
         {"Failed_Parse", "Не удалось разобрать конфигурацию {0}: {1}"},
+        {"Detected_SPT3", "Папка SPT не найдена. Использование структуры модов для профилей из версии 3.11.x"},
+        {"Detected_SPT4", "Папка SPT найдена. Использование структуры модов для профилей из версии 4.x.x"},
 
         // updater
         {"Update_Available", "[bold red]ДОСТУПНО ОБНОВЛЕНИЕ[/]"},
@@ -247,6 +251,8 @@ public static class Loc
         {"Ignore_Loaded", "[gray]Завантажено .fikaignore: {0} правил.[/]"},
         {"Ignore_File", "[gray]Ігнорується файл: {0}[/]"},
         {"Failed_Parse", "Не вдалося проаналізувати конфігурацію {0}: {1}"},
+        {"Detected_SPT3", "Папка SPT не знайдена. Використання структури модів для профілів з версії 3.11.x"},
+        {"Detected_SPT4", "Папка SPT знайдена. Використання структури модів для профілів з версії 4.x.x"},
 
 
         // updater
